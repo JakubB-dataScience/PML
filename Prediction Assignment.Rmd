@@ -8,14 +8,17 @@ output:
     fig_height: 6
     fig_caption: yes
 ---
+
 ### Reproduceability
-The seed of the pseudorandom number generator was set to 1000 for all code. Use the same seed to reproduce the results below.
-Various packages such as caret and randomForest, rpart, rpart.plot and lattice have been downloaded and installed. In order to repeat the following calculations, they should be installed.
+
+The seed of the pseudorandom number generator was set to 1000 for all code. Use the same seed to reproduce the results below. Various packages such as caret and randomForest, rpart, rpart.plot and lattice have been downloaded and installed. In order to repeat the following calculations, they should be installed.
 
 ### Cross-validation
+
 Cross-validation was performed by randomly sub-sampling the training data set without replacing it with 2 sub-samples: 80% was the training data set and 20% was the test data set. The models were fitted to the training dataset and tested on the test dataset. After selecting the most accurate model, it was tested against the original set of test data.
 
 ### Expected out-of-sample error
+
 The expected out-of-sample error will correspond to the size: 1-precision in the cross-validation data. Accuracy is the proportion of correctly classified observations in the entire sample in the subtest data set. Expected accuracy is the expected accuracy in the out-of-sample dataset (i.e. the original test data set). Thus, the expected out-of-sample error value will correspond to the expected number of misclassified cases / total number of cases in the test dataset, which is the quantity: 1-precision found in the cross-validated dataset.
 
 Our result variable "classe" is a disordered factor variable. Thus, we can choose our error type as 1-precision. We have a large sample with N = 19622 in the training dataset. This allows us to divide our Training sample into training and testing to enable cross-validation. Items with all missing values will be discarded, as will items that are irrelevant. All other functions will be saved as corresponding variables. Decision tree and random forest algorithms are known for their ability to detect features important for classification
@@ -29,6 +32,7 @@ library(lattice)
 
 set.seed(1212)
 ```
+
 ```{r}
 # download, save and unzip file
 filename1 <- "pml-training.csv"
@@ -45,11 +49,13 @@ if (!file.exists(filename2)){
   download.file(fileURL, filename2, method="curl")
 }
 ```
+
 ```{r}
 # data loading and cleaning
 trainingset <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
 testingset <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
 ```
+
 ```{r,results='hide'}
 # trainingset exploratory analysis
 dim(trainingset)
@@ -61,6 +67,7 @@ dim(testingset)
 summary(testingset)
 str(testingset)
 ```
+
 ```{r}
 # Delete columns with all missing values
 trainingset<-trainingset[,colSums(is.na(trainingset)) == 0]
@@ -70,6 +77,7 @@ testingset <-testingset[,colSums(is.na(testingset)) == 0]
 trainingset   <-trainingset[,-c(1:7)]
 testingset <-testingset[,-c(1:7)]
 ```
+
 ```{r,results='hide'}
 # looking on clean trainingset
 dim(trainingset)
@@ -106,7 +114,9 @@ plot(as.factor(newTesting$classe), main="Graph of the classe levels in the testi
 #### For the test data set, the most common level A has over 1000 cases and the lowest number of cases, level D has over 600 cases.
 
 ### Model 1
+
 ### Decision Tree
+
 ```{r}
 treeModel <- rpart(classe ~ ., data=newTraining, method="class")
 
@@ -121,7 +131,9 @@ confusionMatrix(treePrediction, as.factor(newTesting$classe))
 ```
 
 ### Model 2
+
 ### Random Forest
+
 ```{r}
 newTraining$classe <- as.factor(newTraining$classe)
 forestModel <- randomForest(classe ~. , data=newTraining, method="class")
@@ -134,6 +146,7 @@ confusionMatrix(forestPrediction, as.factor(newTesting$classe))
 ```
 
 ### Level prediction for 20 different test cases
+
 ```{r}
 finalPrediction <- predict(forestModel, testingset, type = "class")
 finalPrediction
