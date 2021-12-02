@@ -1,0 +1,136 @@
+---
+title: 'Assignment: Prediction Assignment Writeup'
+author: "JB"
+date: "2 12 2021"
+output: html_document
+---
+### Reproduceability
+The seed of the pseudorandom number generator was set to 1000 for all code. Use the same seed to reproduce the results below.
+Various packages such as caret and randomForest, rpart, rpart.plot and lattice have been downloaded and installed. In order to repeat the following calculations, they should be installed.
+
+### Cross-validation
+Cross-validation was performed by randomly sub-sampling the training data set without replacing it with 2 sub-samples: 80% was the training data set and 20% was the test data set. The models were fitted to the training dataset and tested on the test dataset. After selecting the most accurate model, it was tested against the original set of test data.
+
+### Expected out-of-sample error
+The expected out-of-sample error will correspond to the size: 1-precision in the cross-validation data. Accuracy is the proportion of correctly classified observations in the entire sample in the subtest data set. Expected accuracy is the expected accuracy in the out-of-sample dataset (i.e. the original test data set). Thus, the expected out-of-sample error value will correspond to the expected number of misclassified cases / total number of cases in the test dataset, which is the quantity: 1-precision found in the cross-validated dataset.
+
+Our result variable "classe" is a disordered factor variable. Thus, we can choose our error type as 1-precision. We have a large sample with N = 19622 in the training dataset. This allows us to divide our Training sample into training and testing to enable cross-validation. Items with all missing values will be discarded, as will items that are irrelevant. All other functions will be saved as corresponding variables. Decision tree and random forest algorithms are known for their ability to detect features important for classification
+
+```{r}
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(lattice)
+
+set.seed(1212)
+```
+```{r}
+# download, save and unzip file
+filename1 <- "pml-training.csv"
+
+if (!file.exists(filename1)){
+  fileURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+  download.file(fileURL, filename1, method="curl")
+}  
+
+filename2 <- "pml-testing.csv"
+
+if (!file.exists(filename2)){
+  fileURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+  download.file(fileURL, filename2, method="curl")
+}
+```
+```{r}
+# data loading and cleaning
+trainingset <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+testingset <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+```
+```{r,results='hide'}
+# trainingset exploratory analysis
+dim(trainingset)
+summary(trainingset)
+str(trainingset)
+
+# testingset exploratory analysis
+dim(testingset)
+summary(testingset)
+str(testingset)
+```
+```{r}
+# Delete columns with all missing values
+trainingset<-trainingset[,colSums(is.na(trainingset)) == 0]
+testingset <-testingset[,colSums(is.na(testingset)) == 0]
+
+# The variables in columns 1 through 7 are irrelevant and have therefore been removed
+trainingset   <-trainingset[,-c(1:7)]
+testingset <-testingset[,-c(1:7)]
+```
+```{r,results='hide'}
+# looking on clean trainingset
+dim(trainingset)
+head(trainingset)
+
+# looking on clean testingset
+dim(testingset)
+head(testingset)
+```
+
+```{r}
+#  the dataset partition 80% to training and 20% to testing
+newSamples <- createDataPartition(y=trainingset$classe, p=0.80, list=FALSE)
+newTraining <- trainingset[newSamples, ] 
+newTesting <- trainingset[-newSamples, ]
+```
+
+```{r}
+# dimensions of datasets after partitioning
+dim(newTraining)
+dim(newTesting)
+```
+
+```{r}
+plot(as.factor(newTraining$classe), main="Graph of the classe levels in the training dataset", xlab="levels", ylab="Frequency")
+```
+
+#### The frequency of each level is of the same order of magnitude. Level A is the most common of over 4000 cases. Level D has the smallest number of cases (around 2,500).
+
+```{r}
+plot(as.factor(newTesting$classe), main="Graph of the classe levels in the testing dataset", xlab="levels", ylab="Frequency")
+```
+
+#### For the test data set, the most common level A has over 1000 cases and the lowest number of cases, level D has over 600 cases.
+
+### Model 1
+### Decision Tree
+```{r}
+treeModel <- rpart(classe ~ ., data=newTraining, method="class")
+
+# Predicting:
+treePrediction <- predict(treeModel, newTesting, type = "class")
+
+# Plot of the Decision Tree
+rpart.plot(treeModel, main="Classification Tree", extra = 102, under = TRUE, faclen = 0, fallen.leaves = TRUE, tweak = 1.7)
+
+# Test results on our TestTrainingSet data set:
+confusionMatrix(treePrediction, as.factor(newTesting$classe))
+```
+
+### Model 2
+### Random Forest
+```{r}
+newTraining$classe <- as.factor(newTraining$classe)
+forestModel <- randomForest(classe ~. , data=newTraining, method="class")
+
+# Predicting:
+forestPrediction <- predict(forestModel, newTesting, type = "class")
+
+# Test results on subTesting data set:
+confusionMatrix(forestPrediction, as.factor(newTesting$classe))
+```
+
+### Level prediction for 20 different test cases
+```{r}
+finalPrediction <- predict(forestModel, testingset, type = "class")
+finalPrediction
+```
